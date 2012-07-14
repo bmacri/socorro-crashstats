@@ -2,11 +2,13 @@ import logging
 import json
 import datetime
 import functools
+import csv
 from collections import defaultdict
 from django import http
 from django.shortcuts import render, redirect
 from django.conf import settings
 from django.core.urlresolvers import reverse
+from django.http import HttpResponse
 
 from session_csrf import anonymous_csrf
 
@@ -190,7 +192,7 @@ def topcrasher(request, product=None, versions=None, days=None,
 
     api = models.TCBS()
     tcbs = api.get(product, data['version'], crash_type, end_date,
-                    duration=(days * 24), limit='300')
+                   duration=(days * 24), limit='300')
     signatures = [c['signature'] for c in tcbs['crashes']]
 
     bugs = defaultdict(list)
@@ -209,7 +211,43 @@ def topcrasher(request, product=None, versions=None, days=None,
     data['tcbs'] = tcbs
     data['report'] = 'topcrasher'
 
-    return render(request, 'crashstats/topcrasher.html', data)
+    if(request.GET.get('format') == 'csv'):
+        return render_topcrasher_csv(request, data, product)
+    else:
+        return render(request, 'crashstats/topcrasher.html', data)
+
+
+def render_topcrasher_csv(request, data, product):
+    response = HttpResponse(mimetype='text/csv', content_type='text/csv')
+    file_date = datetime.date.today()
+    response['Content-Disposition'] = 'attachment; filename="%s_%s_%s.csv"' \
+                                      % (product, data['version'], file_date)
+    writer = csv.writer(response)
+    writer.writerow(['Rank',
+                     'Change in Rank',
+                     'Percentage of All Crashes',
+                     'Previous Percentage',
+                     'Signature',
+                     'Total',
+                     'Win',
+                     'Mac',
+                     'Linux',
+                     'Version Count',
+                     'Versions'])                     
+    for crash in data['tcbs']['crashes']:
+        writer.writerow([crash['currentRank'],
+                         crash['changeInRank'],
+                         crash['percentOfTotal'],
+                         crash['previousPercentOfTotal'],
+                         crash['signature'],
+                         crash['count'],
+                         crash['win_count'],
+                         crash['mac_count'],
+                         crash['linux_count'],
+                         crash['versions_count'],
+                         crash['versions']])
+
+    return response
 
 
 @set_base_data
