@@ -1,3 +1,7 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
 """The function mimetools.choose_boundary() from Python 2.7, which seems to
 have disappeared in Python 3 (although email.generator._make_boundary() might
 work as a replacement?).
